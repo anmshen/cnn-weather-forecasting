@@ -1,0 +1,9 @@
+2.3.0
+Indexed 26280 input files.
+Loaded norm stats.
+Dataset: 18396/18396 valid
+Dataset: 3942/3942 valid
+Dataset: 3942/3942 valid
+Epoch 01 | train 149.7956 | val 278.8525
+Saved best model
+Epoch 02 | train 56.4734 | val 297.9659
