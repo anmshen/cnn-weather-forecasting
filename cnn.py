@@ -18,6 +18,8 @@ LR         = 3e-4
 EPOCHS     = 20
 SPLIT_SEED = 42  # shuffle train/val pool before 80:20 split (reproducible)
 
+
+
 MODEL_PATH = '/cluster/tufts/c26sp1cs0137/nliu05/best_model.pt'
 NORM_CACHE = '/cluster/tufts/c26sp1cs0137/nliu05/norm_stats.pt'
 
@@ -58,13 +60,36 @@ def is_from_trainval_years(i):
         return False
     return any(os.path.join(INPUT_DIR, str(y)) in path for y in (2018, 2019, 2020))
 
+
+def is_valid_non_nan_sample(i):
+    """Sample is valid if X_t and y_(t+24h) exist and contain no NaN values."""
+    j = i + FORECAST_HORIZON
+    if j >= n:
+        return False
+
+    path = input_path_for_index(i)
+    if path is None:
+        return False
+
+    x = torch.load(path, weights_only=False).float()
+    if torch.isnan(x).any():
+        return False
+
+    if torch.isnan(target_vals[j]).any():
+        return False
+
+    if torch.isnan(target_bin[j]).any():
+        return False
+
+    return True
+
 # ── Split ────────────────────────────────────────────────────────────────────
 # Train and validation only from 2018–2020 folders; shuffle pool, then 80% / 20%.
-# Require i + FORECAST_HORIZON so targets at t+24h exist (evaluate.py uses the same offset).
+# Keep only points where X_t and y_(t+24h) are both NaN-free.
 n = len(times)
 pool_idx = [
     i for i in range(n)
-    if is_from_trainval_years(i) and i + FORECAST_HORIZON < n
+    if is_from_trainval_years(i) and is_valid_non_nan_sample(i)
 ]
 random.Random(SPLIT_SEED).shuffle(pool_idx)
 train_end = int(len(pool_idx) * 0.80)
@@ -76,7 +101,7 @@ print(f"Split (2018–2020, t+{FORECAST_HORIZON}h targets, seed={SPLIT_SEED}): "
 # ── Normalize targets (IMPORTANT) ────────────────────────────────────────────
 # Stats from training *forecast* rows: target at time index i + FORECAST_HORIZON.
 train_tgt_idx = torch.tensor(train_idx, dtype=torch.long) + FORECAST_HORIZON
-clean = torch.nan_to_num(target_vals[train_tgt_idx], nan=0.0)
+clean = target_vals[train_tgt_idx]
 
 cont_mean = clean.mean(dim=0)
 cont_std  = clean.std(dim=0).clamp(min=1e-6)
@@ -95,7 +120,6 @@ def compute_norm_stats(indices, n_vars=42, sample_every=24):
             continue
 
         x = torch.load(path, weights_only=False).float()
-        x = torch.nan_to_num(x, nan=0.0)
 
         x_mean = x.mean(dim=(0, 1))
         x_sq   = (x ** 2).mean(dim=(0, 1))
@@ -120,10 +144,7 @@ else:
 # ── Dataset ──────────────────────────────────────────────────────────────────
 class WeatherDataset(Dataset):
     def __init__(self, indices):
-        self.indices = [
-            i for i in indices
-            if input_path_for_index(i) is not None and i + FORECAST_HORIZON < n
-        ]
+        self.indices = [i for i in indices if is_valid_non_nan_sample(i)]
         print(f"Dataset: {len(self.indices)}/{len(indices)} valid")
 
     def __len__(self):
@@ -134,29 +155,31 @@ class WeatherDataset(Dataset):
         path = FILE_INDEX[time_to_filename(times[i])]
 
         x = torch.load(path, weights_only=False).float()
-        x = torch.nan_to_num(x, nan=0.0)
-
         x = (x - ch_mean) / ch_std
-        x = x.permute(2, 0, 1)
+        x = x.permute(2, 0, 1)          # (C, H, W) — full 450×449 grid
 
         j = i + FORECAST_HORIZON
-        y_cont = torch.nan_to_num(target_vals[j], nan=0.0)
-        y_bin  = torch.nan_to_num(target_bin[j], nan=0.0)
+        y_cont = target_vals[j]
+        y_bin  = target_bin[j]
 
         return x, y_cont, y_bin
 
 # ── Model ────────────────────────────────────────────────────────────────────
-# U-Net-style encoder–decoder with skips: good for gridded fields (multi-scale
-# patterns, fronts, coastlines). Targets here are still *global* scalars, so we
-# global-pool the decoded full-resolution map — not a dense weather map head.
-class _DoubleConv(nn.Module):
-    def __init__(self, in_ch, out_ch):
+# Encoder-only CNN: stride-2 convolutions replace MaxPool for downsampling.
+# Stride-2 convs are slightly faster (one fewer op) and learn the downsampling
+# rather than hard-coding it, which tends to improve feature quality.
+# Four encoder stages give a much larger receptive field (~176 px) while the
+# cropped 352×352 input keeps memory usage manageable.
+# The decoder is dropped — since the target is 6 global scalars (not a dense
+# spatial map), a Global Average Pool after the encoder is sufficient and avoids
+# the cost of upsampling 256-channel feature maps back to full resolution.
+
+class _ConvBnRelu(nn.Module):
+    """Conv2d → BN → ReLU block, optionally stride-2 for downsampling."""
+    def __init__(self, in_ch, out_ch, stride=1):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 3, padding=1, bias=False),
-            nn.BatchNorm2d(out_ch),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
+            nn.Conv2d(in_ch, out_ch, 3, stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
         )
@@ -165,60 +188,78 @@ class _DoubleConv(nn.Module):
         return self.net(x)
 
 
-class _Down(nn.Module):
-    def __init__(self, in_ch, out_ch):
+class _ResBlock(nn.Module):
+    """Two Conv-BN-ReLU layers with a residual (skip) connection.
+    If channels change, a 1×1 projection aligns the skip branch."""
+    def __init__(self, in_ch, out_ch, stride=1):
         super().__init__()
-        self.pool = nn.MaxPool2d(2)
-        self.conv = _DoubleConv(in_ch, out_ch)
+        self.conv1 = _ConvBnRelu(in_ch, out_ch, stride=stride)
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
+            nn.BatchNorm2d(out_ch),
+        )
+        # Projection shortcut when shape changes
+        self.shortcut = (
+            nn.Sequential(
+                nn.Conv2d(in_ch, out_ch, 1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_ch),
+            )
+            if (stride != 1 or in_ch != out_ch)
+            else nn.Identity()
+        )
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        return self.conv(self.pool(x))
-
-
-class _Up(nn.Module):
-    def __init__(self, in_ch, skip_ch, out_ch):
-        super().__init__()
-        self.up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False)
-        self.conv = _DoubleConv(in_ch + skip_ch, out_ch)
-
-    def forward(self, x, skip):
-        x = self.up(x)
-        if x.shape[2:] != skip.shape[2:]:
-            dy = skip.size(2) - x.size(2)
-            dx = skip.size(3) - x.size(3)
-            x = F.pad(x, [dx // 2, dx - dx // 2, dy // 2, dy - dy // 2])
-        return self.conv(torch.cat([skip, x], dim=1))
+        out = self.conv2(self.conv1(x))
+        return self.relu(out + self.shortcut(x))
 
 
 class WeatherCNN(nn.Module):
+    """
+    Encoder-only ResNet-style CNN for weather scalar regression.
+
+    Input : (B, C, 352, 352)  — cropped & normalised spatial snapshot
+    Output: cont (B, 6) continuous targets  +  bin (B,) binary precip label
+
+    Spatial sizes (352 → 176 → 88 → 44 → 22) give a receptive field that
+    covers the full cropped domain by the final stage, so every grid cell
+    can in principle influence every output.
+    """
     def __init__(self, in_channels=42):
         super().__init__()
-        self.inc = _DoubleConv(in_channels, 64)
-        self.down1 = _Down(64, 128)
-        self.down2 = _Down(128, 256)
-        self.down3 = _Down(256, 256)
-        self.up1 = _Up(256, 256, 128)
-        self.up2 = _Up(128, 128, 64)
-        self.up3 = _Up(64, 64, 64)
-        self.gap = nn.AdaptiveAvgPool2d(1)
+        # Stage 0: initial feature projection, no downsampling
+        self.stage0 = _ConvBnRelu(in_channels, 64)            # 352×352, 64ch
+
+        # Stages 1-4: each halves spatial dims via stride-2 conv
+        self.stage1 = _ResBlock(64,  128, stride=2)           # 176×176, 128ch
+        self.stage2 = _ResBlock(128, 256, stride=2)           #  88×88,  256ch
+        self.stage3 = _ResBlock(256, 256, stride=2)           #  44×44,  256ch
+        self.stage4 = _ResBlock(256, 512, stride=2)           #  22×22,  512ch
+
+        self.gap = nn.AdaptiveAvgPool2d(1)                    # → (B, 512, 1, 1)
+
+        # Continuous head: 5 weather vars + precip amount (index 5)
         self.cont_head = nn.Sequential(
-            nn.Linear(64, 128),
+            nn.Linear(512, 256),
             nn.ReLU(inplace=True),
             nn.Dropout(0.3),
-            nn.Linear(128, 6),
+            nn.Linear(256, 6),
         )
-        self.bin_head = nn.Sequential(nn.Linear(64, 64), nn.ReLU(inplace=True), nn.Linear(64, 1))
+        # Binary head: precipitation > 2 mm (raw logit, BCEWithLogitsLoss)
+        self.bin_head = nn.Sequential(
+            nn.Linear(512, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 1),
+        )
 
     def forward(self, x):
-        x0 = self.inc(x)
-        x1 = self.down1(x0)
-        x2 = self.down2(x1)
-        x3 = self.down3(x2)
-        u = self.up1(x3, x2)
-        u = self.up2(u, x1)
-        u = self.up3(u, x0)
-        u = self.gap(u).flatten(1)
-        return self.cont_head(u), self.bin_head(u).squeeze(1)
+        x = self.stage0(x)
+        x = self.stage1(x)
+        x = self.stage2(x)
+        x = self.stage3(x)
+        x = self.stage4(x)
+        x = self.gap(x).flatten(1)
+        return self.cont_head(x), self.bin_head(x).squeeze(1)
 
 # ── Training ─────────────────────────────────────────────────────────────────
 def main():
@@ -233,6 +274,13 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3)
 
+    # bfloat16 autocast: halves memory bandwidth and speeds up matmuls/convs on
+    # Ampere+ GPUs (A100, RTX 30xx+) with no manual scaler needed (bf16 is
+    # numerically stable unlike fp16).
+    use_amp  = DEVICE.type == 'cuda'
+    amp_dtype = torch.bfloat16
+    autocast_ctx = lambda: torch.autocast(device_type='cuda', dtype=amp_dtype, enabled=use_amp)
+
     best_val_loss = float('inf')
 
     for epoch in range(1, EPOCHS + 1):
@@ -242,19 +290,20 @@ def main():
         for x, y_cont, y_bin in train_loader:
             x, y_cont, y_bin = x.to(DEVICE), y_cont.to(DEVICE), y_bin.to(DEVICE)
 
-            pred_cont, pred_bin = model(x)
+            with autocast_ctx():
+                pred_cont, pred_bin = model(x)
 
-            # ── Balanced loss ──
-            loss_main   = mse_loss(pred_cont[:, :5], y_cont[:, :5])
-            loss_precip = mse_loss(pred_cont[:, 5],  y_cont[:, 5])
-            loss_bin    = bce_loss(pred_bin, y_bin)
+                # ── Balanced loss ──
+                loss_main   = mse_loss(pred_cont[:, :5], y_cont[:, :5])
+                loss_precip = mse_loss(pred_cont[:, 5],  y_cont[:, 5])
+                loss_bin    = bce_loss(pred_bin, y_bin)
 
-            loss = loss_main + 0.5 * loss_precip + 0.1 * loss_bin
+                loss = loss_main + 0.5 * loss_precip + 0.1 * loss_bin
 
             if torch.isnan(loss):
                 continue
 
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)   # faster than zero_grad()
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -269,13 +318,14 @@ def main():
             for x, y_cont, y_bin in val_loader:
                 x, y_cont, y_bin = x.to(DEVICE), y_cont.to(DEVICE), y_bin.to(DEVICE)
 
-                pred_cont, pred_bin = model(x)
+                with autocast_ctx():
+                    pred_cont, pred_bin = model(x)
 
-                loss_main   = mse_loss(pred_cont[:, :5], y_cont[:, :5])
-                loss_precip = mse_loss(pred_cont[:, 5],  y_cont[:, 5])
-                loss_bin    = bce_loss(pred_bin, y_bin)
+                    loss_main   = mse_loss(pred_cont[:, :5], y_cont[:, :5])
+                    loss_precip = mse_loss(pred_cont[:, 5],  y_cont[:, 5])
+                    loss_bin    = bce_loss(pred_bin, y_bin)
 
-                loss = loss_main + 0.5 * loss_precip + 0.1 * loss_bin
+                    loss = loss_main + 0.5 * loss_precip + 0.1 * loss_bin
 
                 if not torch.isnan(loss):
                     val_loss += loss.item()
