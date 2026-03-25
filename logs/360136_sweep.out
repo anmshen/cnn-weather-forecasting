@@ -1,0 +1,14 @@
+Building file index …
+  Indexed 26280 files.
+Loading metadata and targets …
+Building train/val split …
+  pool=21144  train=16915  val=4229
+Loading cached norm stats from /cluster/tufts/c26sp1cs0137/ashen05/norm_stats.pt
+  in_channels = 42
+
+============================================================
+Starting sweep: 162 combinations × 5 epochs each
+Results → /cluster/tufts/c26sp1cs0137/ashen05/sweep_results.csv
+============================================================
+
+[  1/162] {'lr': 0.001, 'batch_size': 8, 'bin_loss_w': 0.1, 'crop_r0': 30, 'crop_c0': 0}

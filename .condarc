@@ -1,4 +1,0 @@
-envs_dirs:
-  - /cluster/tufts/c26sp1cs0137/ashen05/condaenv/
-pkgs_dirs:
-  - /cluster/tufts/c26sp1cs0137/ashen05/condapkg/

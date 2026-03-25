@@ -1,0 +1,12 @@
+Indexed 26280 input files.
+Building train/val split (this may take a minute) …
+  pool=21144  train=16915  val=4229
+Loading cached norm stats from /cluster/tufts/c26sp1cs0137/ashen05/norm_stats.pt
+  in_channels=42
+
+Training on cuda  —  50 epochs
+───────────────────────────────────────────────────────
+Epoch 01/50  train cont=0.8101 bin=0.0962  val cont=0.7123 bin=0.0824  (494s)
+  ✓ Saved best model (val_loss=0.7206)
+Epoch 02/50  train cont=0.7644 bin=0.0918  val cont=0.7004 bin=0.0809  (469s)
+  ✓ Saved best model (val_loss=0.7085)
