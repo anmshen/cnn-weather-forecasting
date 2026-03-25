@@ -19,7 +19,8 @@ import torch.nn as nn
 # ── Paths (override via env variables if needed) ──────────────────────────────
 MODEL_PATH = os.getenv(
     "MODEL_PATH",
-    "/cluster/tufts/c26sp1cs0137/ashen05/best_model.pt",
+    "/cluster/tufts/c26sp1cs0137/ashen05/best_model_20260324_210752.pt",
+    
 )
 NORM_PATH = os.getenv(
     "NORM_PATH",
