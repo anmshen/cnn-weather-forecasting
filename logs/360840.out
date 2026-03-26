@@ -1,0 +1,36 @@
+Loading dataset metadata and targets …
+  Full dataset : 2018-07-13T00:00:00.000000000  →  2021-07-11T23:00:00.000000000  (26280 steps)
+  Target vars  : ['TMP@2m_above_ground', 'RH@2m_above_ground', 'UGRD@10m_above_ground', 'VGRD@10m_above_ground', 'GUST@surface', 'APCP_1hr_acc_fcst@surface']
+
+Test configuration
+  Model        : model
+  Test year    : 2021
+  Input  t     : 2021-01-01T00:00:00.000000000  →  2021-07-10T23:00:00.000000000
+  Target t+24h : 2021-01-02T00:00:00.000000000  →  2021-07-11T23:00:00.000000000
+  # samples    : 4584
+
+Loaded model  : model  (WrappedModel)
+
+Running inference …
+    500/4584
+   1000/4584
+   1500/4584
+   2500/4584
+   3000/4584
+   3500/4584
+   4000/4584
+   4500/4584
+   4584/4584
+
+=================================================================
+Results  —  model: model   test year: 2021
+=================================================================
+  TMP@2m_above_ground                         RMSE:   3.5099
+  RH@2m_above_ground                          RMSE:  16.3161
+  UGRD@10m_above_ground                       RMSE:   2.6042
+  VGRD@10m_above_ground                       RMSE:   2.2211
+  GUST@surface                                RMSE:   3.6711
+  APCP_1hr_acc_fcst@surface                   RMSE (true>2mm):   4.5177 mm   [n=83]
+
+  APCP > 2mm (binary)                         AUC:  0.6839   [pos=83, neg=3229]
+=================================================================

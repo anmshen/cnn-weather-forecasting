@@ -1,34 +1,53 @@
+#!/usr/bin/env python3
+"""
+cnn.py — Train a ResNet-style CNN for 24-hour weather forecasting.
+
+Outputs
+-------
+  best_model.pt   : state_dict of the best WeatherCNN (lowest val loss)
+  norm_stats.pt   : normalisation statistics used at training time
+                    keys: mean, std, cont_mean, cont_std
+
+Usage
+-----
+  python cnn.py
+"""
+
 import os
 import random
+import time
+import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
-# ── Config ──────────────────────────────────────────────────────────────────
-DATA_DIR   = '/cluster/tufts/c26sp1cs0137/data/assignment2_data/dataset'
-INPUT_DIR  = os.path.join(DATA_DIR, 'inputs')
-TARGET_PT  = os.path.join(DATA_DIR, 'targets.pt')
-META_PT    = os.path.join(DATA_DIR, 'metadata.pt')
+# ── Config ───────────────────────────────────────────────────────────────────
+DATA_DIR        = '/cluster/tufts/c26sp1cs0137/data/assignment2_data/dataset'
+INPUT_DIR       = os.path.join(DATA_DIR, 'inputs')
+TARGET_PT       = os.path.join(DATA_DIR, 'targets.pt')
+META_PT         = os.path.join(DATA_DIR, 'metadata.pt')
 
-DEVICE     = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-BATCH_SIZE = 32
-LR         = 3e-4
-EPOCHS     = 20
-SPLIT_SEED = 42  # shuffle train/val pool before 80:20 split (reproducible)
+DEVICE          = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+BATCH_SIZE      = 8           # reduce if GPU memory is tight
+LR              = 3e-4
+EPOCHS          = 50
+SPLIT_SEED      = 42
+FORECAST_HORIZON = 24         # predict t+24h
 
+_run_time       = time.strftime('%Y%m%d_%H%M%S')
+MODEL_PATH      = f'/cluster/tufts/c26sp1cs0137/ashen05/best_model_{_run_time}.pt'
+NORM_CACHE      = '/cluster/tufts/c26sp1cs0137/ashen05/norm_stats.pt'
 
+# Spatial crop: take a 352×352 window centred on the target point
+# (Jumbo statue is near row ~225, col ~200 in the 450×449 grid).
+# Adjust CROP_R0/C0 if your target point is elsewhere.
+CROP_H, CROP_W  = 352, 352
+CROP_R0         = max(0, 225 - CROP_H // 2)   # 49
+CROP_C0         = max(0, 200 - CROP_W // 2)   # 24
 
-MODEL_PATH = '/cluster/tufts/c26sp1cs0137/nliu05/best_model.pt'
-NORM_CACHE = '/cluster/tufts/c26sp1cs0137/nliu05/norm_stats.pt'
-
-# Hourly time series: input at index i is X_t; targets are weather at t + 24h
-# (same convention as evaluation/evaluate.py: t24_idx = t_idx + 24).
-FORECAST_HORIZON = 24
-
-# ── File index ───────────────────────────────────────────────────────────────
+# ── File index ────────────────────────────────────────────────────────────────
 def build_file_index(input_dir):
+    """Walk INPUT_DIR once and build filename → full-path mapping."""
     file_index = {}
     for root, _, files in os.walk(input_dir):
         for f in files:
@@ -39,143 +58,199 @@ def build_file_index(input_dir):
 FILE_INDEX = build_file_index(INPUT_DIR)
 print(f"Indexed {len(FILE_INDEX)} input files.")
 
-# ── Load data ────────────────────────────────────────────────────────────────
+# ── Load metadata / targets ───────────────────────────────────────────────────
 meta   = torch.load(META_PT,   weights_only=False)
 target = torch.load(TARGET_PT, weights_only=False)
 
-times        = meta['times']
-target_vals  = target['values'].float()
-target_bin   = target['binary_label'].float()
+times       = meta['times']                    # numpy datetime64, shape (T,)
+target_vals = target['values'].float()         # (T, 6)
+target_bin  = target['binary_label'].float()   # (T,)
+
+n = len(times)
 
 def time_to_filename(t):
+    """Convert a datetime64 timestamp to the expected filename, e.g. X_2018010100.pt."""
     return "X_" + str(t)[:13].replace('T', '').replace('-', '').replace(':', '') + ".pt"
 
 def input_path_for_index(i):
     return FILE_INDEX.get(time_to_filename(times[i]))
 
 def is_from_trainval_years(i):
-    """Inputs for train/val must live under inputs/2018, inputs/2019, or inputs/2020."""
     path = input_path_for_index(i)
     if path is None:
         return False
     return any(os.path.join(INPUT_DIR, str(y)) in path for y in (2018, 2019, 2020))
 
-
-def is_valid_non_nan_sample(i):
-    """Sample is valid if X_t and y_(t+24h) exist and contain no NaN values."""
+def is_valid_sample(i):
+    """True iff:
+      - X_t input file exists
+      - times[i+24] is exactly 24 hours after times[i] (no gaps in the series)
+      - neither X_t nor y_(t+24h) contain NaN
+    """
     j = i + FORECAST_HORIZON
     if j >= n:
+        return False
+
+    # Confirm the time array is contiguous at this step — guards against
+    # missing hours where times[i+24] would be t+25h, t+48h, etc.
+    expected_delta = np.timedelta64(FORECAST_HORIZON, 'h')
+    if (times[j] - times[i]) != expected_delta:
         return False
 
     path = input_path_for_index(i)
     if path is None:
         return False
 
-    x = torch.load(path, weights_only=False).float()
-    if torch.isnan(x).any():
-        return False
-
+    # lightweight NaN check on targets (fast — avoids loading input tensor here)
     if torch.isnan(target_vals[j]).any():
         return False
-
-    if torch.isnan(target_bin[j]).any():
+    if torch.isnan(target_bin[j]):
         return False
 
+    # NOTE: NaN inputs are caught lazily in Dataset.__getitem__ (returns None)
+    # and filtered by collate_skip_none, keeping index-building fast.
     return True
 
-# ── Split ────────────────────────────────────────────────────────────────────
-# Train and validation only from 2018–2020 folders; shuffle pool, then 80% / 20%.
-# Keep only points where X_t and y_(t+24h) are both NaN-free.
-n = len(times)
-pool_idx = [
-    i for i in range(n)
-    if is_from_trainval_years(i) and is_valid_non_nan_sample(i)
-]
+# ── Build train / val split ───────────────────────────────────────────────────
+print("Building train/val split (this may take a minute) …")
+pool_idx = [i for i in range(n) if is_from_trainval_years(i) and is_valid_sample(i)]
 random.Random(SPLIT_SEED).shuffle(pool_idx)
-train_end = int(len(pool_idx) * 0.80)
-train_idx = pool_idx[:train_end]
-val_idx   = pool_idx[train_end:]
-print(f"Split (2018–2020, t+{FORECAST_HORIZON}h targets, seed={SPLIT_SEED}): "
-      f"train {len(train_idx)} | val {len(val_idx)} (pool {len(pool_idx)})")
+train_end  = int(len(pool_idx) * 0.80)
+train_idx  = pool_idx[:train_end]
+val_idx    = pool_idx[train_end:]
+print(f"  pool={len(pool_idx)}  train={len(train_idx)}  val={len(val_idx)}")
 
-# ── Normalize targets (IMPORTANT) ────────────────────────────────────────────
-# Stats from training *forecast* rows: target at time index i + FORECAST_HORIZON.
-train_tgt_idx = torch.tensor(train_idx, dtype=torch.long) + FORECAST_HORIZON
-clean = target_vals[train_tgt_idx]
+# ── Compute / load normalisation statistics ───────────────────────────────────
+def compute_norm_stats(sample_indices, n_samples=2000):
+    """Estimate per-channel mean & std from a random subsample of training inputs.
 
-cont_mean = clean.mean(dim=0)
-cont_std  = clean.std(dim=0).clamp(min=1e-6)
+    We also compute mean/std of the continuous targets so the model can be
+    trained on normalised outputs and predictions can be de-normalised at
+    inference time.
+    """
+    print(f"  Computing input norm stats from {n_samples} random training samples …")
+    rng   = random.Random(0)
+    picks = rng.sample(sample_indices, min(n_samples, len(sample_indices)))
 
-target_vals = (target_vals - cont_mean) / cont_std
+    sum_x  = None
+    sum_x2 = None
+    count  = 0
 
-# ── Input normalization ──────────────────────────────────────────────────────
-def compute_norm_stats(indices, n_vars=42, sample_every=24):
-    sums  = torch.zeros(n_vars)
-    sqsum = torch.zeros(n_vars)
-    count = 0
-
-    for i in indices[::sample_every]:
+    for i in picks:
         path = input_path_for_index(i)
-        if path is None:
+        x = torch.load(path, weights_only=True).float()   # (450, 449, C)
+        if torch.isnan(x).any():
             continue
+        x_crop = x[CROP_R0:CROP_R0+CROP_H, CROP_C0:CROP_C0+CROP_W, :]  # (H,W,C)
+        x_flat = x_crop.reshape(-1, x_crop.shape[-1])     # (H*W, C)
+        if sum_x is None:
+            C = x_flat.shape[1]
+            sum_x  = torch.zeros(C)
+            sum_x2 = torch.zeros(C)
+        sum_x  += x_flat.mean(0)
+        sum_x2 += (x_flat ** 2).mean(0)
+        count  += 1
 
-        x = torch.load(path, weights_only=False).float()
+    mean = sum_x / count
+    std  = (sum_x2 / count - mean ** 2).clamp(min=1e-8).sqrt()
 
-        x_mean = x.mean(dim=(0, 1))
-        x_sq   = (x ** 2).mean(dim=(0, 1))
+    # continuous targets: collect y_(t+24h) for all training indices
+    j_vals = torch.stack([target_vals[i + FORECAST_HORIZON] for i in sample_indices])
+    cont_mean = j_vals.mean(0)   # (6,)
+    cont_std  = j_vals.std(0).clamp(min=1e-8)
 
-        sums  += x_mean
-        sqsum += x_sq
-        count += 1
-
-    mean = sums / count
-    var  = (sqsum / count - mean ** 2).clamp(min=1e-6)
-    std  = torch.sqrt(var)
-
-    return mean, std
+    return {"mean": mean, "std": std, "cont_mean": cont_mean, "cont_std": cont_std}
 
 if os.path.exists(NORM_CACHE):
-    norm = torch.load(NORM_CACHE, weights_only=False)
-    ch_mean, ch_std = norm['mean'], norm['std']
+    print(f"Loading cached norm stats from {NORM_CACHE}")
+    norm_stats = torch.load(NORM_CACHE, map_location='cpu', weights_only=False)
 else:
-    ch_mean, ch_std = compute_norm_stats(train_idx)
-    torch.save({'mean': ch_mean, 'std': ch_std}, NORM_CACHE)
+    print("Norm cache not found — computing from scratch …")
+    norm_stats = compute_norm_stats(train_idx)
+    os.makedirs(os.path.dirname(NORM_CACHE), exist_ok=True)
+    torch.save(norm_stats, NORM_CACHE)
+    print(f"Saved norm stats to {NORM_CACHE}")
 
-# ── Dataset ──────────────────────────────────────────────────────────────────
+# Keep CPU copies for use inside DataLoader worker processes (workers cannot
+# access the CUDA context of the main process — putting tensors on CUDA here
+# would cause "CUDA initialization error" in every worker).
+inp_mean_cpu  = norm_stats['mean'].float()       # (C,)  — used in __getitem__
+inp_std_cpu   = norm_stats['std'].float()        # (C,)
+cont_mean_cpu = norm_stats['cont_mean'].float()  # (6,)
+cont_std_cpu  = norm_stats['cont_std'].float()   # (6,)
+
+# GPU copies used only in the training loop (main process)
+inp_mean  = inp_mean_cpu.to(DEVICE)
+inp_std   = inp_std_cpu.to(DEVICE)
+cont_mean = cont_mean_cpu.to(DEVICE)
+cont_std  = cont_std_cpu.to(DEVICE)
+
+IN_CHANNELS = inp_mean_cpu.shape[0]
+print(f"  in_channels={IN_CHANNELS}")
+
+# ── Dataset ───────────────────────────────────────────────────────────────────
 class WeatherDataset(Dataset):
+    """Yields (X_norm, y_cont_norm, y_bin) tuples.
+
+    X_norm        : (C, CROP_H, CROP_W) float32  — normalised spatial crop
+    y_cont_norm   : (6,) float32                  — normalised continuous targets
+    y_bin         : scalar float32                — binary precip label
+    """
     def __init__(self, indices):
-        self.indices = [i for i in indices if is_valid_non_nan_sample(i)]
-        print(f"Dataset: {len(self.indices)}/{len(indices)} valid")
+        self.indices = indices
 
     def __len__(self):
         return len(self.indices)
 
     def __getitem__(self, idx):
-        i = self.indices[idx]
-        path = FILE_INDEX[time_to_filename(times[i])]
+        i    = self.indices[idx]
+        j    = i + FORECAST_HORIZON
+        path = input_path_for_index(i)
 
-        x = torch.load(path, weights_only=False).float()
-        x = (x - ch_mean) / ch_std
-        x = x.permute(2, 0, 1)          # (C, H, W) — full 450×449 grid
+        x = torch.load(path, weights_only=True).float()   # (450, 449, C)
+        if torch.isnan(x).any():
+            return None   # filtered by collate_fn
 
-        j = i + FORECAST_HORIZON
-        y_cont = target_vals[j]
-        y_bin  = target_bin[j]
+        # crop
+        x_crop = x[CROP_R0:CROP_R0+CROP_H, CROP_C0:CROP_C0+CROP_W, :]   # (H,W,C)
+        # (H,W,C) → (C,H,W)
+        x_crop = x_crop.permute(2, 0, 1)
 
-        return x, y_cont, y_bin
+        # normalise input — use CPU tensors (workers have no CUDA context)
+        x_norm = (x_crop - inp_mean_cpu[:, None, None]) / inp_std_cpu[:, None, None]
 
-# ── Model ────────────────────────────────────────────────────────────────────
-# Encoder-only CNN: stride-2 convolutions replace MaxPool for downsampling.
-# Stride-2 convs are slightly faster (one fewer op) and learn the downsampling
-# rather than hard-coding it, which tends to improve feature quality.
-# Four encoder stages give a much larger receptive field (~176 px) while the
-# cropped 352×352 input keeps memory usage manageable.
-# The decoder is dropped — since the target is 6 global scalars (not a dense
-# spatial map), a Global Average Pool after the encoder is sufficient and avoids
-# the cost of upsampling 256-channel feature maps back to full resolution.
+        # normalise continuous targets
+        y_cont      = target_vals[j]                                   # (6,)
+        y_cont_norm = (y_cont - cont_mean_cpu) / cont_std_cpu
 
+        y_bin = target_bin[j]
+
+        return x_norm, y_cont_norm, y_bin
+
+
+def collate_skip_none(batch):
+    """Drop None samples (NaN inputs) that __getitem__ may return."""
+    batch = [b for b in batch if b is not None]
+    if len(batch) == 0:
+        return None
+    x, y_cont, y_bin = zip(*batch)
+    return torch.stack(x), torch.stack(y_cont), torch.stack(y_bin)
+
+
+train_ds = WeatherDataset(train_idx)
+val_ds   = WeatherDataset(val_idx)
+
+train_loader = DataLoader(
+    train_ds, batch_size=BATCH_SIZE, shuffle=True,
+    num_workers=4, pin_memory=True, collate_fn=collate_skip_none,
+)
+val_loader = DataLoader(
+    val_ds, batch_size=BATCH_SIZE, shuffle=False,
+    num_workers=4, pin_memory=True, collate_fn=collate_skip_none,
+)
+
+# ── Model ─────────────────────────────────────────────────────────────────────
 class _ConvBnRelu(nn.Module):
-    """Conv2d → BN → ReLU block, optionally stride-2 for downsampling."""
     def __init__(self, in_ch, out_ch, stride=1):
         super().__init__()
         self.net = nn.Sequential(
@@ -183,14 +258,11 @@ class _ConvBnRelu(nn.Module):
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
         )
-
     def forward(self, x):
         return self.net(x)
 
 
 class _ResBlock(nn.Module):
-    """Two Conv-BN-ReLU layers with a residual (skip) connection.
-    If channels change, a 1×1 projection aligns the skip branch."""
     def __init__(self, in_ch, out_ch, stride=1):
         super().__init__()
         self.conv1 = _ConvBnRelu(in_ch, out_ch, stride=stride)
@@ -198,7 +270,6 @@ class _ResBlock(nn.Module):
             nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
             nn.BatchNorm2d(out_ch),
         )
-        # Projection shortcut when shape changes
         self.shortcut = (
             nn.Sequential(
                 nn.Conv2d(in_ch, out_ch, 1, stride=stride, bias=False),
@@ -210,50 +281,38 @@ class _ResBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        out = self.conv2(self.conv1(x))
-        return self.relu(out + self.shortcut(x))
+        return self.relu(self.conv2(self.conv1(x)) + self.shortcut(x))
 
 
 class WeatherCNN(nn.Module):
     """
-    Encoder-only ResNet-style CNN for weather scalar regression.
+    Encoder-only ResNet CNN for weather scalar regression.
 
-    Input : (B, C, 352, 352)  — cropped & normalised spatial snapshot
-    Output: cont (B, 6) continuous targets  +  bin (B,) binary precip label
-
-    Spatial sizes (352 → 176 → 88 → 44 → 22) give a receptive field that
-    covers the full cropped domain by the final stage, so every grid cell
-    can in principle influence every output.
+    Input : (B, C, CROP_H, CROP_W)  — already normalised
+    Output: (B, 6) continuous targets (in normalised space),
+            (B,)  binary logit for precip > 2 mm
     """
-    def __init__(self, in_channels=42):
+    def __init__(self, in_channels):
         super().__init__()
-        # Stage 0: initial feature projection, no downsampling
-        self.stage0 = _ConvBnRelu(in_channels, 64)            # 352×352, 64ch
+        self.stem   = _ConvBnRelu(in_channels, 64)
+        self.stage1 = _ResBlock(64,  128, stride=2)
+        self.stage2 = _ResBlock(128, 256, stride=2)
+        self.stage3 = _ResBlock(256, 256, stride=2)
+        self.stage4 = _ResBlock(256, 512, stride=2)
+        self.gap    = nn.AdaptiveAvgPool2d(1)
 
-        # Stages 1-4: each halves spatial dims via stride-2 conv
-        self.stage1 = _ResBlock(64,  128, stride=2)           # 176×176, 128ch
-        self.stage2 = _ResBlock(128, 256, stride=2)           #  88×88,  256ch
-        self.stage3 = _ResBlock(256, 256, stride=2)           #  44×44,  256ch
-        self.stage4 = _ResBlock(256, 512, stride=2)           #  22×22,  512ch
-
-        self.gap = nn.AdaptiveAvgPool2d(1)                    # → (B, 512, 1, 1)
-
-        # Continuous head: 5 weather vars + precip amount (index 5)
         self.cont_head = nn.Sequential(
-            nn.Linear(512, 256),
-            nn.ReLU(inplace=True),
+            nn.Linear(512, 256), nn.ReLU(inplace=True),
             nn.Dropout(0.3),
             nn.Linear(256, 6),
         )
-        # Binary head: precipitation > 2 mm (raw logit, BCEWithLogitsLoss)
         self.bin_head = nn.Sequential(
-            nn.Linear(512, 64),
-            nn.ReLU(inplace=True),
+            nn.Linear(512, 64), nn.ReLU(inplace=True),
             nn.Linear(64, 1),
         )
 
     def forward(self, x):
-        x = self.stage0(x)
+        x = self.stem(x)
         x = self.stage1(x)
         x = self.stage2(x)
         x = self.stage3(x)
@@ -261,86 +320,81 @@ class WeatherCNN(nn.Module):
         x = self.gap(x).flatten(1)
         return self.cont_head(x), self.bin_head(x).squeeze(1)
 
-# ── Training ─────────────────────────────────────────────────────────────────
-def main():
-    train_loader = DataLoader(WeatherDataset(train_idx), batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader   = DataLoader(WeatherDataset(val_idx),   batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
-    model = WeatherCNN().to(DEVICE)
+# ── Training ──────────────────────────────────────────────────────────────────
+# Let cuDNN benchmark and pick the fastest *supported* plan for our fixed
+# input shape instead of retrying unsupported plans each forward pass.
+torch.backends.cudnn.benchmark       = True
+# TF32 avoids the strict fp32 cuDNN convolution plan that raises
+# "CUDNN_STATUS_NOT_SUPPORTED" on some driver/PyTorch combinations.
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32       = True
 
-    mse_loss = nn.MSELoss()
-    bce_loss = nn.BCEWithLogitsLoss()
+model     = WeatherCNN(in_channels=IN_CHANNELS).to(DEVICE)
+optimiser = torch.optim.Adam(model.parameters(), lr=LR)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=EPOCHS)
+mse_loss  = nn.MSELoss()
+bce_loss  = nn.BCEWithLogitsLoss()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3)
+best_val_loss = float('inf')
 
-    # bfloat16 autocast: halves memory bandwidth and speeds up matmuls/convs on
-    # Ampere+ GPUs (A100, RTX 30xx+) with no manual scaler needed (bf16 is
-    # numerically stable unlike fp16).
-    use_amp  = DEVICE.type == 'cuda'
-    amp_dtype = torch.bfloat16
-    autocast_ctx = lambda: torch.autocast(device_type='cuda', dtype=amp_dtype, enabled=use_amp)
+def run_epoch(loader, train=True):
+    model.train() if train else model.eval()
+    total_cont = 0.0
+    total_bin  = 0.0
+    n_batches  = 0
 
-    best_val_loss = float('inf')
-
-    for epoch in range(1, EPOCHS + 1):
-        model.train()
-        train_loss = 0
-
-        for x, y_cont, y_bin in train_loader:
-            x, y_cont, y_bin = x.to(DEVICE), y_cont.to(DEVICE), y_bin.to(DEVICE)
-
-            with autocast_ctx():
-                pred_cont, pred_bin = model(x)
-
-                # ── Balanced loss ──
-                loss_main   = mse_loss(pred_cont[:, :5], y_cont[:, :5])
-                loss_precip = mse_loss(pred_cont[:, 5],  y_cont[:, 5])
-                loss_bin    = bce_loss(pred_bin, y_bin)
-
-                loss = loss_main + 0.5 * loss_precip + 0.1 * loss_bin
-
-            if torch.isnan(loss):
+    ctx = torch.enable_grad() if train else torch.no_grad()
+    with ctx:
+        for batch in loader:
+            if batch is None:
                 continue
+            x, y_cont, y_bin = batch
+            x      = x.to(DEVICE)
+            y_cont = y_cont.to(DEVICE)
+            y_bin  = y_bin.to(DEVICE)
 
-            optimizer.zero_grad(set_to_none=True)   # faster than zero_grad()
-            loss.backward()
+            pred_cont, pred_bin = model(x)
 
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
+            loss_cont = mse_loss(pred_cont, y_cont)
+            loss_bin  = bce_loss(pred_bin, y_bin)
+            loss      = loss_cont + 0.1 * loss_bin   # weight binary term lightly
 
-            train_loss += loss.item()
+            if train:
+                optimiser.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), 5.0)
+                optimiser.step()
 
-        model.eval()
-        val_loss = 0
+            total_cont += loss_cont.item()
+            total_bin  += loss_bin.item()
+            n_batches  += 1
 
-        with torch.no_grad():
-            for x, y_cont, y_bin in val_loader:
-                x, y_cont, y_bin = x.to(DEVICE), y_cont.to(DEVICE), y_bin.to(DEVICE)
+    return total_cont / max(n_batches, 1), total_bin / max(n_batches, 1)
 
-                with autocast_ctx():
-                    pred_cont, pred_bin = model(x)
 
-                    loss_main   = mse_loss(pred_cont[:, :5], y_cont[:, :5])
-                    loss_precip = mse_loss(pred_cont[:, 5],  y_cont[:, 5])
-                    loss_bin    = bce_loss(pred_bin, y_bin)
+print(f"\nTraining on {DEVICE}  —  {EPOCHS} epochs\n{'─'*55}")
+for epoch in range(1, EPOCHS + 1):
+    t0 = time.time()
+    tr_cont, tr_bin = run_epoch(train_loader, train=True)
+    va_cont, va_bin = run_epoch(val_loader,   train=False)
+    scheduler.step()
 
-                    loss = loss_main + 0.5 * loss_precip + 0.1 * loss_bin
+    val_loss = va_cont + 0.1 * va_bin
+    elapsed  = time.time() - t0
+    print(
+        f"Epoch {epoch:02d}/{EPOCHS}  "
+        f"train cont={tr_cont:.4f} bin={tr_bin:.4f}  "
+        f"val cont={va_cont:.4f} bin={va_bin:.4f}  "
+        f"({elapsed:.0f}s)"
+    )
 
-                if not torch.isnan(loss):
-                    val_loss += loss.item()
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        torch.save(model.state_dict(), MODEL_PATH)
+        print(f"  ✓ Saved best model (val_loss={val_loss:.4f})")
 
-        train_loss /= len(train_loader)
-        val_loss   /= len(val_loader)
-
-        scheduler.step(val_loss)
-
-        print(f"Epoch {epoch:02d} | train {train_loss:.4f} | val {val_loss:.4f}")
-
-        if val_loss < best_val_loss and not np.isnan(val_loss):
-            best_val_loss = val_loss
-            torch.save(model.state_dict(), MODEL_PATH)
-            print("Saved best model")
-
-if __name__ == "__main__":
-    main()
+print(f"\nDone. Best val loss = {best_val_loss:.4f}")
+print(f"Model  → {MODEL_PATH}")
+print(f"Norms  → {NORM_CACHE}")
