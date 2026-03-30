@@ -28,15 +28,15 @@ TARGET_PT       = os.path.join(DATA_DIR, 'targets.pt')
 META_PT         = os.path.join(DATA_DIR, 'metadata.pt')
 
 DEVICE          = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-BATCH_SIZE      = 8           # reduce if GPU memory is tight
-LR              = 3e-4
+BATCH_SIZE      = 32           # reduce if GPU memory is tight
+LR              = 4e-4
 EPOCHS          = 50
 SPLIT_SEED      = 42
 FORECAST_HORIZON = 24         # predict t+24h
 
 _run_time       = time.strftime('%Y%m%d_%H%M%S')
-MODEL_PATH      = f'/cluster/tufts/c26sp1cs0137/ashen05/best_model_{_run_time}.pt'
-NORM_CACHE      = '/cluster/tufts/c26sp1cs0137/ashen05/norm_stats.pt'
+MODEL_PATH      = f'/cluster/tufts/c26sp1cs0137/nliu05/best_model_{_run_time}.pt'
+NORM_CACHE      = '/cluster/tufts/c26sp1cs0137/nliu05/norm_stats.pt'
 
 # Spatial crop: take a 352×352 window centred on the target point
 # (Jumbo statue is near row ~225, col ~200 in the 450×449 grid).
@@ -254,13 +254,30 @@ class _ConvBnRelu(nn.Module):
     def __init__(self, in_ch, out_ch, stride=1):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 3, stride=stride, padding=1, bias=False),
+            # depthwise: each channel filtered independently
+            nn.Conv2d(in_ch, in_ch, 3, stride=stride, padding=1, groups=in_ch, bias=False),
+            # pointwise: mix channels cheaply
+            nn.Conv2d(in_ch, out_ch, 1, bias=False),
+            # nn.Conv2d(in_ch, out_ch, 3, stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
         )
     def forward(self, x):
         return self.net(x)
 
+class _SE(nn.Module):
+    def __init__(self, channels, ratio=16):
+        super().__init__()
+        self.se = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(channels, channels // ratio),
+            nn.ReLU(),
+            nn.Linear(channels // ratio, channels),
+            nn.Sigmoid(),
+        )
+    def forward(self, x):
+        return x * self.se(x).view(x.size(0), -1, 1, 1)
 
 class _ResBlock(nn.Module):
     def __init__(self, in_ch, out_ch, stride=1):
@@ -279,9 +296,10 @@ class _ResBlock(nn.Module):
             else nn.Identity()
         )
         self.relu = nn.ReLU(inplace=True)
+        self.se = _SE(out_ch)
 
     def forward(self, x):
-        return self.relu(self.conv2(self.conv1(x)) + self.shortcut(x))
+        return self.relu(self.se(self.conv2(self.conv1(x))) + self.shortcut(x))
 
 
 class WeatherCNN(nn.Module):
@@ -297,17 +315,17 @@ class WeatherCNN(nn.Module):
         self.stem   = _ConvBnRelu(in_channels, 64)
         self.stage1 = _ResBlock(64,  128, stride=2)
         self.stage2 = _ResBlock(128, 256, stride=2)
-        self.stage3 = _ResBlock(256, 256, stride=2)
-        self.stage4 = _ResBlock(256, 512, stride=2)
+        self.stage3 = _ResBlock(256, 256, stride=2)   # 256→512 (was 256→256)
+        self.stage4 = _ResBlock(256, 512, stride=2)  # 512→1024 (was 256→512)
         self.gap    = nn.AdaptiveAvgPool2d(1)
 
         self.cont_head = nn.Sequential(
-            nn.Linear(512, 256), nn.ReLU(inplace=True),
+            nn.Linear(512, 256), nn.ReLU(inplace=True),  # 1024 (was 512)
             nn.Dropout(0.3),
             nn.Linear(256, 6),
         )
         self.bin_head = nn.Sequential(
-            nn.Linear(512, 64), nn.ReLU(inplace=True),
+            nn.Linear(512, 64), nn.ReLU(inplace=True),   # 1024 (was 512)
             nn.Linear(64, 1),
         )
 
