@@ -1,0 +1,578 @@
+==============================================
+  Job ID      : 379455
+  Node        : pax008
+  Start time  : Sun Mar 29 10:15:23 EDT 2026
+  Working dir : /cluster/tufts/c26sp1cs0137/ashen05
+==============================================
+
+--- GPU info ---
+NVIDIA H200, 143771 MiB, 575.57.08
+
+--- CPU / memory ---
+CPUs allocated : 6
+Memory limit   : n/a
+
+--- Python / PyTorch ---
+Python  3.10.14
+PyTorch 2.3.0
+CUDA    True  (12.1)
+Device  NVIDIA H200
+
+--- Fresh run: no prior results found ---
+
+--- Starting ablation study : Sun Mar 29 10:15:27 EDT 2026 ---
+
+Total timesteps : 26280
+Input variables : 42
+Variable list:
+  [  0] TMP@2m_above_ground
+  [  1] RH@2m_above_ground
+  [  2] UGRD@10m_above_ground
+  [  3] VGRD@10m_above_ground
+  [  4] GUST@surface
+  [  5] DSWRF@surface
+  [  6] APCP_1hr_acc_fcst@surface
+  [  7] CAPE@surface
+  [  8] DPT@1000mb
+  [  9] DPT@500mb
+  [ 10] DPT@700mb
+  [ 11] DPT@850mb
+  [ 12] DPT@925mb
+  [ 13] HGT@1000mb
+  [ 14] HGT@500mb
+  [ 15] HGT@700mb
+  [ 16] HGT@850mb
+  [ 17] HGT@surface
+  [ 18] TMP@1000mb
+  [ 19] TMP@500mb
+  [ 20] TMP@700mb
+  [ 21] TMP@850mb
+  [ 22] TMP@925mb
+  [ 23] UGRD@1000mb
+  [ 24] UGRD@250mb
+  [ 25] UGRD@500mb
+  [ 26] UGRD@700mb
+  [ 27] UGRD@850mb
+  [ 28] UGRD@925mb
+  [ 29] VGRD@1000mb
+  [ 30] VGRD@250mb
+  [ 31] VGRD@500mb
+  [ 32] VGRD@700mb
+  [ 33] VGRD@850mb
+  [ 34] VGRD@925mb
+  [ 35] TCDC@entire_atmosphere
+  [ 36] HCDC@high_cloud_layer
+  [ 37] MCDC@middle_cloud_layer
+  [ 38] LCDC@low_cloud_layer
+  [ 39] PWAT@entire_atmosphere_single_layer
+  [ 40] RHPW@entire_atmosphere
+  [ 41] VIL@entire_atmosphere
+
+Group assignments:
+  temperature         :   6 channels  [0, 18, 19, 20, 21, 22]
+  humidity            :   7 channels  [1, 8, 9, 10, 11, 12]...
+  wind_u              :   7 channels  [2, 23, 24, 25, 26, 27]...
+  wind_v              :   7 channels  [3, 29, 30, 31, 32, 33]...
+  wind_gust           :   1 channels  [4]
+  precipitation       :   1 channels  [6]
+  pressure            :   5 channels  [13, 14, 15, 16, 17]
+  clouds_rad          :   5 channels  [5, 35, 36, 37, 38]
+  other               :   3 channels  [7, 39, 41]
+
+Total experiments to run: 19
+  all_features                             (42 channels)
+  drop_temperature                         (36 channels)
+  drop_humidity                            (35 channels)
+  drop_wind_u                              (35 channels)
+  drop_wind_v                              (35 channels)
+  drop_wind_gust                           (41 channels)
+  drop_precipitation                       (41 channels)
+  drop_pressure                            (37 channels)
+  drop_clouds_rad                          (37 channels)
+  drop_other                               (39 channels)
+  only_temperature                         (6 channels)
+  only_humidity                            (7 channels)
+  only_wind_u                              (7 channels)
+  only_wind_v                              (7 channels)
+  only_wind_gust                           (1 channels)
+  only_precipitation                       (1 channels)
+  only_pressure                            (5 channels)
+  only_clouds_rad                          (5 channels)
+  only_other                               (3 channels)
+
+Indexed 26280 input files.
+Building splits …
+  train=16915  val=4229  test=4584
+Loading cached norm stats from /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_norm_stats.pt
+
+  Checkpoint exists for 'all_features', skipping training.
+
+  Results — all_features  (42 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:   3.6726
+    RH@2m_above_ground                          RMSE:  16.7097
+    UGRD@10m_above_ground                       RMSE:   2.7185
+    VGRD@10m_above_ground                       RMSE:   2.1667
+    GUST@surface                                RMSE:   3.7005
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7640
+    APCP (true>2mm)                             RMSE:   4.5075  [n=83]
+    APCP binary                                  AUC:   0.6769
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+==============================================================
+  Experiment : drop_temperature  (36 channels)
+==============================================================
+  Ep 01/50  tr=0.8054/0.0917  val=0.7058/0.0833  (447s)
+    checkpointed (val=0.7141)
+  Ep 02/50  tr=0.7432/0.0928  val=0.6753/0.0813  (427s)
+    checkpointed (val=0.6834)
+  Ep 03/50  tr=0.7101/0.0891  val=0.6550/0.0801  (417s)
+    checkpointed (val=0.6630)
+  Ep 04/50  tr=0.6769/0.0870  val=0.6507/0.0792  (429s)
+    checkpointed (val=0.6587)
+  Ep 05/50  tr=0.6513/0.0854  val=0.6129/0.0790  (432s)
+    checkpointed (val=0.6208)
+  Ep 06/50  tr=0.6278/0.0887  val=0.5781/0.0789  (413s)
+    checkpointed (val=0.5860)
+  Ep 07/50  tr=0.6166/0.0847  val=0.5687/0.0807  (415s)
+    checkpointed (val=0.5768)
+  Ep 08/50  tr=0.5870/0.0851  val=0.5517/0.0813  (413s)
+    checkpointed (val=0.5598)
+  Ep 09/50  tr=0.5763/0.0834  val=0.5282/0.0761  (411s)
+    checkpointed (val=0.5358)
+  Ep 10/50  tr=0.5506/0.0815  val=0.5212/0.0791  (414s)
+    checkpointed (val=0.5291)
+  Ep 11/50  tr=0.5531/0.0819  val=0.5139/0.0744  (412s)
+    checkpointed (val=0.5213)
+  Ep 12/50  tr=0.5310/0.0792  val=0.5173/0.0730  (415s)
+  Ep 13/50  tr=0.5267/0.0772  val=0.4812/0.0723  (412s)
+    checkpointed (val=0.4884)
+  Ep 14/50  tr=0.4941/0.0776  val=0.4756/0.0670  (413s)
+    checkpointed (val=0.4823)
+  Ep 15/50  tr=0.4859/0.0735  val=0.5200/0.0689  (424s)
+  Ep 16/50  tr=0.4717/0.0709  val=0.4666/0.0664  (439s)
+    checkpointed (val=0.4732)
+  Ep 17/50  tr=0.4583/0.0713  val=0.4441/0.0679  (436s)
+    checkpointed (val=0.4509)
+  Ep 18/50  tr=0.4473/0.0704  val=0.4466/0.0636  (436s)
+  Ep 19/50  tr=0.4406/0.0687  val=0.4315/0.0617  (417s)
+    checkpointed (val=0.4377)
+  Ep 20/50  tr=0.4384/0.0670  val=0.4237/0.0613  (415s)
+    checkpointed (val=0.4298)
+  Ep 21/50  tr=0.4201/0.0623  val=0.4119/0.0621  (441s)
+    checkpointed (val=0.4181)
+  Ep 22/50  tr=0.4004/0.0604  val=0.4208/0.0591  (434s)
+  Ep 23/50  tr=0.3986/0.0606  val=0.3987/0.0612  (431s)
+    checkpointed (val=0.4048)
+  Ep 24/50  tr=0.3933/0.0565  val=0.3798/0.0582  (434s)
+    checkpointed (val=0.3856)
+  Ep 25/50  tr=0.3852/0.0584  val=0.3718/0.0576  (419s)
+    checkpointed (val=0.3776)
+  Ep 26/50  tr=0.3711/0.0565  val=0.3774/0.0556  (417s)
+  Ep 27/50  tr=0.3478/0.0526  val=0.3673/0.0645  (422s)
+    checkpointed (val=0.3737)
+  Ep 28/50  tr=0.3548/0.0515  val=0.3807/0.0724  (422s)
+  Ep 29/50  tr=0.3429/0.0526  val=0.3556/0.0610  (412s)
+    checkpointed (val=0.3617)
+  Ep 30/50  tr=0.3343/0.0518  val=0.3500/0.0592  (413s)
+    checkpointed (val=0.3560)
+  Ep 31/50  tr=0.3245/0.0490  val=0.3410/0.0580  (415s)
+    checkpointed (val=0.3468)
+  Ep 32/50  tr=0.3195/0.0477  val=0.3335/0.0566  (418s)
+    checkpointed (val=0.3392)
+  Ep 33/50  tr=0.3064/0.0427  val=0.3423/0.0590  (422s)
+  Ep 34/50  tr=0.2998/0.0430  val=0.3376/0.0610  (435s)
+  Ep 35/50  tr=0.3032/0.0429  val=0.3505/0.0589  (413s)
+  Ep 36/50  tr=0.2949/0.0410  val=0.3183/0.0591  (415s)
+    checkpointed (val=0.3242)
+  Ep 37/50  tr=0.2991/0.0455  val=0.3213/0.0579  (418s)
+  Ep 38/50  tr=0.2958/0.0410  val=0.3214/0.0565  (414s)
+  Ep 39/50  tr=0.2762/0.0402  val=0.3132/0.0577  (414s)
+    checkpointed (val=0.3190)
+  Ep 40/50  tr=0.2724/0.0392  val=0.3095/0.0579  (417s)
+    checkpointed (val=0.3153)
+  Ep 41/50  tr=0.2747/0.0419  val=0.3041/0.0572  (414s)
+    checkpointed (val=0.3098)
+  Ep 42/50  tr=0.2687/0.0381  val=0.3066/0.0577  (414s)
+  Ep 43/50  tr=0.2557/0.0364  val=0.3056/0.0556  (417s)
+  Ep 44/50  tr=0.2593/0.0363  val=0.3060/0.0550  (416s)
+  Ep 45/50  tr=0.2542/0.0353  val=0.2986/0.0550  (411s)
+    checkpointed (val=0.3041)
+  Ep 46/50  tr=0.2539/0.0335  val=0.3016/0.0559  (409s)
+  Ep 47/50  tr=0.2599/0.0363  val=0.3044/0.0548  (411s)
+  Ep 48/50  tr=0.2591/0.0355  val=0.3007/0.0543  (409s)
+  Ep 49/50  tr=0.2507/0.0337  val=0.3034/0.0567  (411s)
+  Ep 50/50  tr=0.2613/0.0362  val=0.2975/0.0552  (416s)
+    checkpointed (val=0.3030)
+  Best val loss: 0.3030
+
+  Results — drop_temperature  (36 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:   3.5093
+    RH@2m_above_ground                          RMSE:  15.8663
+    UGRD@10m_above_ground                       RMSE:   2.6577
+    VGRD@10m_above_ground                       RMSE:   2.1592
+    GUST@surface                                RMSE:   3.6491
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7633
+    APCP (true>2mm)                             RMSE:   4.4645  [n=83]
+    APCP binary                                  AUC:   0.6797
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+==============================================================
+  Experiment : drop_humidity  (35 channels)
+==============================================================
+  Ep 01/50  tr=0.8130/0.0913  val=0.7060/0.0846  (410s)
+    checkpointed (val=0.7145)
+  Ep 02/50  tr=0.7449/0.0897  val=0.6766/0.0819  (418s)
+    checkpointed (val=0.6848)
+  Ep 03/50  tr=0.7152/0.0902  val=0.6402/0.0812  (421s)
+    checkpointed (val=0.6483)
+  Ep 04/50  tr=0.6778/0.0860  val=0.6222/0.0794  (424s)
+    checkpointed (val=0.6302)
+  Ep 05/50  tr=0.6658/0.0873  val=0.6396/0.0784  (423s)
+  Ep 06/50  tr=0.6501/0.0870  val=0.6064/0.0807  (422s)
+    checkpointed (val=0.6145)
+  Ep 07/50  tr=0.6210/0.0878  val=0.5741/0.0805  (418s)
+    checkpointed (val=0.5822)
+  Ep 08/50  tr=0.5936/0.0838  val=0.5623/0.0768  (419s)
+    checkpointed (val=0.5700)
+  Ep 09/50  tr=0.5961/0.0868  val=0.5965/0.0869  (422s)
+  Ep 10/50  tr=0.5690/0.0859  val=0.5343/0.0746  (422s)
+    checkpointed (val=0.5417)
+  Ep 11/50  tr=0.5537/0.0811  val=0.5337/0.0746  (420s)
+    checkpointed (val=0.5412)
+  Ep 12/50  tr=0.5505/0.0848  val=0.5374/0.0790  (422s)
+  Ep 13/50  tr=0.5266/0.0805  val=0.5340/0.0731  (418s)
+  Ep 14/50  tr=0.5220/0.0793  val=0.5121/0.0732  (423s)
+    checkpointed (val=0.5194)
+  Ep 15/50  tr=0.5017/0.0769  val=0.4882/0.0723  (422s)
+    checkpointed (val=0.4955)
+  Ep 16/50  tr=0.4858/0.0751  val=0.4893/0.0704  (424s)
+  Ep 17/50  tr=0.4794/0.0740  val=0.4650/0.0701  (429s)
+    checkpointed (val=0.4720)
+  Ep 18/50  tr=0.4660/0.0735  val=0.4748/0.0718  (423s)
+  Ep 19/50  tr=0.4614/0.0732  val=0.4608/0.0674  (422s)
+    checkpointed (val=0.4675)
+  Ep 20/50  tr=0.4502/0.0688  val=0.4443/0.0696  (424s)
+    checkpointed (val=0.4512)
+  Ep 21/50  tr=0.4403/0.0691  val=0.4270/0.0658  (423s)
+    checkpointed (val=0.4335)
+  Ep 22/50  tr=0.4298/0.0660  val=0.4458/0.0667  (422s)
+  Ep 23/50  tr=0.4214/0.0654  val=0.4227/0.0655  (420s)
+    checkpointed (val=0.4292)
+  Ep 24/50  tr=0.4083/0.0627  val=0.4170/0.0631  (420s)
+    checkpointed (val=0.4233)
+  Ep 25/50  tr=0.3969/0.0630  val=0.4146/0.0679  (421s)
+    checkpointed (val=0.4214)
+  Ep 26/50  tr=0.3806/0.0599  val=0.3926/0.0610  (420s)
+    checkpointed (val=0.3987)
+  Ep 27/50  tr=0.3753/0.0599  val=0.3800/0.0574  (419s)
+    checkpointed (val=0.3857)
+  Ep 28/50  tr=0.3664/0.0577  val=0.3675/0.0585  (419s)
+    checkpointed (val=0.3734)
+  Ep 29/50  tr=0.3673/0.0577  val=0.3714/0.0599  (416s)
+  Ep 30/50  tr=0.3568/0.0551  val=0.3742/0.0615  (417s)
+  Ep 31/50  tr=0.3543/0.0538  val=0.3600/0.0626  (418s)
+    checkpointed (val=0.3662)
+  Ep 32/50  tr=0.3545/0.0495  val=0.3537/0.0611  (418s)
+    checkpointed (val=0.3598)
+  Ep 33/50  tr=0.3349/0.0505  val=0.3520/0.0577  (418s)
+    checkpointed (val=0.3577)
+  Ep 34/50  tr=0.3280/0.0494  val=0.3456/0.0603  (420s)
+    checkpointed (val=0.3517)
+  Ep 35/50  tr=0.3145/0.0462  val=0.3360/0.0593  (419s)
+    checkpointed (val=0.3420)
+  Ep 36/50  tr=0.3135/0.0472  val=0.3356/0.0603  (417s)
+    checkpointed (val=0.3416)
+  Ep 37/50  tr=0.3104/0.0449  val=0.3321/0.0578  (416s)
+    checkpointed (val=0.3378)
+  Ep 38/50  tr=0.3072/0.0435  val=0.3253/0.0573  (415s)
+    checkpointed (val=0.3310)
+  Ep 39/50  tr=0.2988/0.0445  val=0.3251/0.0562  (417s)
+    checkpointed (val=0.3307)
+  Ep 40/50  tr=0.2995/0.0430  val=0.3173/0.0586  (417s)
+    checkpointed (val=0.3231)
+  Ep 41/50  tr=0.2868/0.0425  val=0.3204/0.0566  (416s)
+  Ep 42/50  tr=0.2908/0.0416  val=0.3193/0.0586  (419s)
+  Ep 43/50  tr=0.2939/0.0412  val=0.3133/0.0581  (415s)
+    checkpointed (val=0.3191)
+  Ep 44/50  tr=0.2915/0.0399  val=0.3153/0.0575  (416s)
+  Ep 45/50  tr=0.2766/0.0410  val=0.3110/0.0601  (420s)
+    checkpointed (val=0.3171)
+  Ep 46/50  tr=0.2869/0.0421  val=0.3136/0.0564  (418s)
+  Ep 47/50  tr=0.2776/0.0385  val=0.3122/0.0578  (419s)
+  Ep 48/50  tr=0.2686/0.0367  val=0.3136/0.0593  (417s)
+  Ep 49/50  tr=0.2702/0.0370  val=0.3071/0.0570  (417s)
+    checkpointed (val=0.3128)
+  Ep 50/50  tr=0.2778/0.0389  val=0.3083/0.0564  (421s)
+  Best val loss: 0.3128
+
+  Results — drop_humidity  (35 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:   3.6206
+    RH@2m_above_ground                          RMSE:  16.0171
+    UGRD@10m_above_ground                       RMSE:   2.7176
+    VGRD@10m_above_ground                       RMSE:   2.2757
+    GUST@surface                                RMSE:   3.6274
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7511
+    APCP (true>2mm)                             RMSE:   4.4162  [n=83]
+    APCP binary                                  AUC:   0.6993
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+==============================================================
+  Experiment : drop_wind_u  (35 channels)
+==============================================================
+  Ep 01/50  tr=0.8168/0.0966  val=0.7499/0.0840  (425s)
+    checkpointed (val=0.7583)
+  Ep 02/50  tr=0.7462/0.0915  val=0.7078/0.0861  (417s)
+    checkpointed (val=0.7165)
+  Ep 03/50  tr=0.7299/0.0916  val=0.6444/0.0881  (424s)
+    checkpointed (val=0.6533)
+  Ep 04/50  tr=0.7012/0.0887  val=0.6449/0.0828  (420s)
+    checkpointed (val=0.6532)
+  Ep 05/50  tr=0.6843/0.0871  val=0.6332/0.0841  (420s)
+    checkpointed (val=0.6416)
+  Ep 06/50  tr=0.6691/0.0905  val=0.6074/0.0845  (420s)
+    checkpointed (val=0.6159)
+  Ep 07/50  tr=0.6415/0.0883  val=0.6064/0.0805  (424s)
+    checkpointed (val=0.6144)
+  Ep 08/50  tr=0.6180/0.0869  val=0.5791/0.0822  (423s)
+    checkpointed (val=0.5873)
+  Ep 09/50  tr=0.6080/0.0875  val=0.5480/0.0782  (424s)
+    checkpointed (val=0.5559)
+  Ep 10/50  tr=0.5821/0.0863  val=0.5715/0.0791  (419s)
+  Ep 11/50  tr=0.5632/0.0840  val=0.5443/0.0775  (422s)
+    checkpointed (val=0.5521)
+  Ep 12/50  tr=0.5541/0.0834  val=0.5448/0.0767  (423s)
+  Ep 13/50  tr=0.5491/0.0804  val=0.5419/0.0740  (417s)
+    checkpointed (val=0.5493)
+  Ep 14/50  tr=0.5266/0.0796  val=0.5083/0.0746  (420s)
+    checkpointed (val=0.5157)
+  Ep 15/50  tr=0.5158/0.0783  val=0.4926/0.0734  (418s)
+    checkpointed (val=0.4999)
+  Ep 16/50  tr=0.4996/0.0771  val=0.4973/0.0731  (417s)
+  Ep 17/50  tr=0.4819/0.0743  val=0.5174/0.0697  (422s)
+  Ep 18/50  tr=0.4799/0.0718  val=0.4726/0.0718  (419s)
+    checkpointed (val=0.4798)
+  Ep 19/50  tr=0.4602/0.0742  val=0.4757/0.0715  (416s)
+  Ep 20/50  tr=0.4516/0.0697  val=0.4630/0.0683  (421s)
+    checkpointed (val=0.4699)
+  Ep 21/50  tr=0.4447/0.0695  val=0.4580/0.0675  (416s)
+    checkpointed (val=0.4648)
+  Ep 22/50  tr=0.4333/0.0674  val=0.4478/0.0650  (418s)
+    checkpointed (val=0.4543)
+  Ep 23/50  tr=0.4183/0.0639  val=0.4359/0.0676  (417s)
+    checkpointed (val=0.4426)
+  Ep 24/50  tr=0.4198/0.0679  val=0.4190/0.0619  (419s)
+    checkpointed (val=0.4252)
+  Ep 25/50  tr=0.4149/0.0640  val=0.4235/0.0667  (418s)
+  Ep 26/50  tr=0.3942/0.0650  val=0.4085/0.0648  (414s)
+    checkpointed (val=0.4150)
+  Ep 27/50  tr=0.3817/0.0579  val=0.3932/0.0641  (416s)
+    checkpointed (val=0.3996)
+  Ep 28/50  tr=0.3967/0.0594  val=0.3872/0.0604  (418s)
+    checkpointed (val=0.3932)
+  Ep 29/50  tr=0.3706/0.0536  val=0.3977/0.0660  (416s)
+  Ep 30/50  tr=0.3555/0.0554  val=0.3820/0.0596  (417s)
+    checkpointed (val=0.3880)
+  Ep 31/50  tr=0.3558/0.0527  val=0.3743/0.0605  (417s)
+    checkpointed (val=0.3804)
+  Ep 32/50  tr=0.3454/0.0516  val=0.3725/0.0609  (414s)
+    checkpointed (val=0.3786)
+  Ep 33/50  tr=0.3460/0.0535  val=0.3644/0.0621  (418s)
+    checkpointed (val=0.3706)
+  Ep 34/50  tr=0.3286/0.0504  val=0.3609/0.0601  (417s)
+    checkpointed (val=0.3669)
+  Ep 35/50  tr=0.3212/0.0491  val=0.3561/0.0603  (419s)
+    checkpointed (val=0.3621)
+  Ep 36/50  tr=0.3246/0.0481  val=0.3513/0.0596  (418s)
+    checkpointed (val=0.3573)
+  Ep 37/50  tr=0.3171/0.0475  val=0.3394/0.0606  (421s)
+    checkpointed (val=0.3454)
+  Ep 38/50  tr=0.3209/0.0475  val=0.3571/0.0609  (417s)
+  Ep 39/50  tr=0.3025/0.0471  val=0.3356/0.0567  (419s)
+    checkpointed (val=0.3413)
+  Ep 40/50  tr=0.2964/0.0439  val=0.3368/0.0586  (420s)
+  Ep 41/50  tr=0.2890/0.0426  val=0.3276/0.0583  (418s)
+    checkpointed (val=0.3334)
+  Ep 42/50  tr=0.2995/0.0424  val=0.3337/0.0578  (419s)
+  Ep 43/50  tr=0.2943/0.0425  val=0.3243/0.0571  (416s)
+    checkpointed (val=0.3300)
+  Ep 44/50  tr=0.2891/0.0406  val=0.3243/0.0578  (420s)
+  Ep 45/50  tr=0.2822/0.0420  val=0.3188/0.0566  (417s)
+    checkpointed (val=0.3245)
+  Ep 46/50  tr=0.2913/0.0408  val=0.3175/0.0560  (418s)
+    checkpointed (val=0.3231)
+  Ep 47/50  tr=0.2846/0.0406  val=0.3214/0.0562  (420s)
+  Ep 48/50  tr=0.2823/0.0385  val=0.3201/0.0573  (417s)
+  Ep 49/50  tr=0.2806/0.0403  val=0.3241/0.0567  (416s)
+  Ep 50/50  tr=0.2794/0.0391  val=0.3242/0.0572  (418s)
+  Best val loss: 0.3231
+
+  Results — drop_wind_u  (35 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:   3.7945
+    RH@2m_above_ground                          RMSE:  16.2086
+    UGRD@10m_above_ground                       RMSE:   2.6111
+    VGRD@10m_above_ground                       RMSE:   2.3236
+    GUST@surface                                RMSE:   3.5834
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7571
+    APCP (true>2mm)                             RMSE:   4.4573  [n=83]
+    APCP binary                                  AUC:   0.7189
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+==============================================================
+  Experiment : drop_wind_v  (35 channels)
+==============================================================
+  Ep 01/50  tr=0.8213/0.0966  val=0.8217/0.0868  (405s)
+    checkpointed (val=0.8304)
+  Ep 02/50  tr=0.7563/0.0910  val=0.7166/0.0838  (416s)
+    checkpointed (val=0.7250)
+  Ep 03/50  tr=0.7193/0.0864  val=0.6880/0.0811  (414s)
+    checkpointed (val=0.6961)
+  Ep 04/50  tr=0.6933/0.0881  val=0.6597/0.0799  (415s)
+    checkpointed (val=0.6677)
+  Ep 05/50  tr=0.6661/0.0877  val=0.6400/0.0839  (416s)
+    checkpointed (val=0.6484)
+  Ep 06/50  tr=0.6580/0.0883  val=0.6374/0.0798  (415s)
+    checkpointed (val=0.6454)
+  Ep 07/50  tr=0.6353/0.0854  val=0.5811/0.0782  (414s)
+    checkpointed (val=0.5889)
+  Ep 08/50  tr=0.6134/0.0835  val=0.5926/0.0763  (415s)
+  Ep 09/50  tr=0.5938/0.0834  val=0.5883/0.0757  (420s)
+  Ep 10/50  tr=0.5772/0.0803  val=0.5649/0.0733  (423s)
+    checkpointed (val=0.5722)
+  Ep 11/50  tr=0.5718/0.0823  val=0.5490/0.0742  (418s)
+    checkpointed (val=0.5564)
+  Ep 12/50  tr=0.5752/0.0805  val=0.5735/0.0741  (414s)
+  Ep 13/50  tr=0.5390/0.0807  val=0.5337/0.0699  (415s)
+    checkpointed (val=0.5407)
+  Ep 14/50  tr=0.5341/0.0768  val=0.5316/0.0742  (415s)
+    checkpointed (val=0.5390)
+  Ep 15/50  tr=0.5148/0.0761  val=0.5043/0.0695  (416s)
+    checkpointed (val=0.5112)
+  Ep 16/50  tr=0.5004/0.0758  val=0.5003/0.0669  (416s)
+    checkpointed (val=0.5070)
+  Ep 17/50  tr=0.4904/0.0755  val=0.5025/0.0675  (416s)
+  Ep 18/50  tr=0.4823/0.0723  val=0.4674/0.0645  (415s)
+    checkpointed (val=0.4739)
+  Ep 19/50  tr=0.4908/0.0717  val=0.4622/0.0626  (417s)
+    checkpointed (val=0.4684)
+  Ep 20/50  tr=0.4572/0.0686  val=0.4996/0.0640  (417s)
+  Ep 21/50  tr=0.4450/0.0694  val=0.4623/0.0642  (417s)
+  Ep 22/50  tr=0.4493/0.0673  val=0.4560/0.0621  (416s)
+    checkpointed (val=0.4622)
+  Ep 23/50  tr=0.4349/0.0662  val=0.4447/0.0607  (418s)
+    checkpointed (val=0.4508)
+  Ep 24/50  tr=0.4152/0.0636  val=0.4444/0.0581  (418s)
+    checkpointed (val=0.4502)
+  Ep 25/50  tr=0.4180/0.0624  val=0.4320/0.0580  (421s)
+    checkpointed (val=0.4378)
+  Ep 26/50  tr=0.3883/0.0570  val=0.4102/0.0577  (418s)
+    checkpointed (val=0.4160)
+  Ep 27/50  tr=0.3798/0.0542  val=0.4014/0.0608  (431s)
+    checkpointed (val=0.4075)
+  Ep 28/50  tr=0.4006/0.0581  val=0.3869/0.0566  (424s)
+    checkpointed (val=0.3926)
+  Ep 29/50  tr=0.3704/0.0525  val=0.3884/0.0610  (418s)
+  Ep 30/50  tr=0.3719/0.0523  val=0.3803/0.0566  (421s)
+    checkpointed (val=0.3860)
+  Ep 31/50  tr=0.3518/0.0538  val=0.3776/0.0575  (419s)
+    checkpointed (val=0.3833)
+  Ep 32/50  tr=0.3608/0.0515  val=0.3698/0.0601  (420s)
+    checkpointed (val=0.3758)
+  Ep 33/50  tr=0.3378/0.0498  val=0.3690/0.0567  (422s)
+    checkpointed (val=0.3747)
+  Ep 34/50  tr=0.3312/0.0486  val=0.3696/0.0588  (416s)
+  Ep 35/50  tr=0.3212/0.0465  val=0.3621/0.0560  (418s)
+    checkpointed (val=0.3677)
+  Ep 36/50  tr=0.3285/0.0465  val=0.3482/0.0599  (419s)
+    checkpointed (val=0.3542)
+  Ep 37/50  tr=0.3102/0.0445  val=0.3458/0.0569  (415s)
+    checkpointed (val=0.3515)
+  Ep 38/50  tr=0.3102/0.0490  val=0.3513/0.0570  (420s)
+  Ep 39/50  tr=0.3225/0.0453  val=0.3410/0.0556  (417s)
+    checkpointed (val=0.3466)
+  Ep 40/50  tr=0.3075/0.0418  val=0.3458/0.0587  (420s)
+  Ep 41/50  tr=0.2909/0.0389  val=0.3405/0.0583  (419s)
+    checkpointed (val=0.3464)
+  Ep 42/50  tr=0.2950/0.0417  val=0.3318/0.0570  (415s)
+    checkpointed (val=0.3375)
+  Ep 43/50  tr=0.2978/0.0417  val=0.3256/0.0553  (416s)
+    checkpointed (val=0.3311)
+  Ep 44/50  tr=0.3075/0.0386  val=0.3366/0.0562  (417s)
+  Ep 45/50  tr=0.2962/0.0380  val=0.3317/0.0586  (417s)
+  Ep 46/50  tr=0.2932/0.0403  val=0.3348/0.0581  (419s)
+  Ep 47/50  tr=0.2879/0.0369  val=0.3258/0.0566  (417s)
+  Ep 48/50  tr=0.2784/0.0376  val=0.3274/0.0577  (416s)
+  Ep 49/50  tr=0.2846/0.0383  val=0.3266/0.0576  (420s)
+  Ep 50/50  tr=0.2775/0.0379  val=0.3266/0.0574  (418s)
+  Best val loss: 0.3311
+
+  Results — drop_wind_v  (35 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:   3.8183
+    RH@2m_above_ground                          RMSE:  17.6433
+    UGRD@10m_above_ground                       RMSE:   2.9433
+    VGRD@10m_above_ground                       RMSE:   2.2949
+    GUST@surface                                RMSE:   3.8427
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7716
+    APCP (true>2mm)                             RMSE:   4.6054  [n=83]
+    APCP binary                                  AUC:   0.6057
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+==============================================================
+  Experiment : drop_wind_gust  (41 channels)
+==============================================================
+  Ep 01/50  tr=0.8177/0.0935  val=0.7245/0.0851  (442s)
+    checkpointed (val=0.7330)
+  Ep 02/50  tr=0.7453/0.0890  val=0.6642/0.0839  (443s)
+    checkpointed (val=0.6726)
+  Ep 03/50  tr=0.7112/0.0881  val=0.6531/0.0819  (441s)
+    checkpointed (val=0.6613)
+  Ep 04/50  tr=0.6831/0.0899  val=0.6149/0.0807  (442s)
+    checkpointed (val=0.6229)
+  Ep 05/50  tr=0.6671/0.0908  val=0.6070/0.0786  (444s)
+    checkpointed (val=0.6148)
+  Ep 06/50  tr=0.6385/0.0875  val=0.5653/0.0801  (443s)
+    checkpointed (val=0.5733)
+  Ep 07/50  tr=0.6050/0.0859  val=0.5528/0.0770  (441s)
+    checkpointed (val=0.5605)
+  Ep 08/50  tr=0.5845/0.0826  val=0.5483/0.0751  (444s)
+    checkpointed (val=0.5558)
+  Ep 09/50  tr=0.5770/0.0807  val=0.5646/0.0753  (443s)
+  Ep 10/50  tr=0.5440/0.0811  val=0.5285/0.0774  (442s)
+    checkpointed (val=0.5362)
+  Ep 11/50  tr=0.5429/0.0805  val=0.5182/0.0726  (441s)
+    checkpointed (val=0.5255)
+  Ep 12/50  tr=0.5156/0.0792  val=0.5207/0.0719  (448s)
+  Ep 13/50  tr=0.5185/0.0814  val=0.4787/0.0711  (448s)
+    checkpointed (val=0.4858)
+  Ep 14/50  tr=0.5050/0.0811  val=0.4795/0.0701  (445s)
+  Ep 15/50  tr=0.4782/0.0734  val=0.4882/0.0724  (457s)
+  Ep 16/50  tr=0.4856/0.0756  val=0.4793/0.0698  (450s)
+  Ep 17/50  tr=0.4605/0.0716  val=0.4748/0.0679  (447s)
+    checkpointed (val=0.4816)
+  Ep 18/50  tr=0.4556/0.0709  val=0.4380/0.0666  (446s)
+    checkpointed (val=0.4446)
+  Ep 19/50  tr=0.4453/0.0686  val=0.4400/0.0619  (462s)
+  Ep 20/50  tr=0.4234/0.0654  val=0.4307/0.0608  (489s)
+    checkpointed (val=0.4368)
+  Ep 21/50  tr=0.4052/0.0659  val=0.4007/0.0591  (479s)
+    checkpointed (val=0.4066)
+  Ep 22/50  tr=0.4052/0.0628  val=0.4434/0.0635  (461s)
+  Ep 23/50  tr=0.3983/0.0614  val=0.4312/0.0619  (460s)
+  Ep 24/50  tr=0.3796/0.0616  val=0.3853/0.0566  (467s)
+    checkpointed (val=0.3909)
+  Ep 25/50  tr=0.3710/0.0613  val=0.3824/0.0567  (462s)
+    checkpointed (val=0.3880)
+  Ep 26/50  tr=0.3648/0.0584  val=0.3830/0.0583  (457s)
+  Ep 27/50  tr=0.3516/0.0580  val=0.3933/0.0556  (481s)
+  Ep 28/50  tr=0.3488/0.0554  val=0.3817/0.0553  (459s)
+    checkpointed (val=0.3872)
+  Ep 29/50  tr=0.3432/0.0510  val=0.3455/0.0556  (459s)
+    checkpointed (val=0.3510)
+  Ep 30/50  tr=0.3383/0.0526  val=0.3647/0.0604  (460s)
+  Ep 31/50  tr=0.3270/0.0488  val=0.3464/0.0569  (460s)
+  Ep 32/50  tr=0.3215/0.0479  val=0.3356/0.0573  (464s)
+    checkpointed (val=0.3414)

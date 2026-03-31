@@ -4,3 +4,7 @@ meta = torch.load('/cluster/tufts/c26sp1cs0137/data/assignment2_data/dataset/met
 print("jumbo_y_idx:", meta['jumbo_y_idx'])
 print("jumbo_x_idx:", meta['jumbo_x_idx'])
 print("input_shape:", meta['input_shape'])
+
+
+print("Keys found in metadata:", meta.keys()) # Add this line
+# print(meta) # Optional: uncomment if the keys are still confusing

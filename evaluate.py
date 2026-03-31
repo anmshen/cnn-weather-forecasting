@@ -39,7 +39,7 @@ from sklearn.metrics import roc_auc_score
 # Configuration — edit here to switch models or test periods
 # ============================================================
 
-MODEL_NAME = "model"   # folder name inside evaluation/  (e.g. "stub", "my_cnn")
+MODEL_NAME = "model2"   # folder name inside evaluation/  (e.g. "stub", "my_cnn")
 TEST_YEAR  = 2021     # year whose hours form the test set
 
 # ============================================================

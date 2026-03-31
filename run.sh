@@ -17,4 +17,4 @@ export OMP_NUM_THREADS=4
 
 cd /cluster/tufts/c26sp1cs0137/ashen05
 
-python cnn.py
+python cnn2.py
