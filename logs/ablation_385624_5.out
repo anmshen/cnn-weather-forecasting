@@ -1,0 +1,288 @@
+==============================================
+  Job ID      : 386179
+  Task ID     : 5
+  Label       : only_clouds_rad
+  Node        : pax051
+  Start time  : Wed Apr  1 02:14:23 EDT 2026
+==============================================
+--- GPU ---
+Wed Apr  1 02:14:23 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.57.08              Driver Version: 575.57.08      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-PCIE-40GB          On  |   00000000:1C:00.0 Off |                    0 |
+| N/A   34C    P0             43W /  250W |       0MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+Running experiment: only_clouds_rad
+
+Total timesteps : 26280
+Input variables : 42
+Variable list:
+  [  0] TMP@2m_above_ground
+  [  1] RH@2m_above_ground
+  [  2] UGRD@10m_above_ground
+  [  3] VGRD@10m_above_ground
+  [  4] GUST@surface
+  [  5] DSWRF@surface
+  [  6] APCP_1hr_acc_fcst@surface
+  [  7] CAPE@surface
+  [  8] DPT@1000mb
+  [  9] DPT@500mb
+  [ 10] DPT@700mb
+  [ 11] DPT@850mb
+  [ 12] DPT@925mb
+  [ 13] HGT@1000mb
+  [ 14] HGT@500mb
+  [ 15] HGT@700mb
+  [ 16] HGT@850mb
+  [ 17] HGT@surface
+  [ 18] TMP@1000mb
+  [ 19] TMP@500mb
+  [ 20] TMP@700mb
+  [ 21] TMP@850mb
+  [ 22] TMP@925mb
+  [ 23] UGRD@1000mb
+  [ 24] UGRD@250mb
+  [ 25] UGRD@500mb
+  [ 26] UGRD@700mb
+  [ 27] UGRD@850mb
+  [ 28] UGRD@925mb
+  [ 29] VGRD@1000mb
+  [ 30] VGRD@250mb
+  [ 31] VGRD@500mb
+  [ 32] VGRD@700mb
+  [ 33] VGRD@850mb
+  [ 34] VGRD@925mb
+  [ 35] TCDC@entire_atmosphere
+  [ 36] HCDC@high_cloud_layer
+  [ 37] MCDC@middle_cloud_layer
+  [ 38] LCDC@low_cloud_layer
+  [ 39] PWAT@entire_atmosphere_single_layer
+  [ 40] RHPW@entire_atmosphere
+  [ 41] VIL@entire_atmosphere
+
+Group assignments:
+  temperature         :   6 channels  [0, 18, 19, 20, 21, 22]
+  humidity            :   7 channels  [1, 8, 9, 10, 11, 12]...
+  wind_u              :   7 channels  [2, 23, 24, 25, 26, 27]...
+  wind_v              :   7 channels  [3, 29, 30, 31, 32, 33]...
+  wind_gust           :   1 channels  [4]
+  precipitation       :   1 channels  [6]
+  pressure            :   5 channels  [13, 14, 15, 16, 17]
+  clouds_rad          :   5 channels  [5, 35, 36, 37, 38]
+  other               :   3 channels  [7, 39, 41]
+
+Total experiments to run: 19
+  all_features                             (42 channels)
+  drop_temperature                         (36 channels)
+  drop_humidity                            (35 channels)
+  drop_wind_u                              (35 channels)
+  drop_wind_v                              (35 channels)
+  drop_wind_gust                           (41 channels)
+  drop_precipitation                       (41 channels)
+  drop_pressure                            (37 channels)
+  drop_clouds_rad                          (37 channels)
+  drop_other                               (39 channels)
+  only_temperature                         (6 channels)
+  only_humidity                            (7 channels)
+  only_wind_u                              (7 channels)
+  only_wind_v                              (7 channels)
+  only_wind_gust                           (1 channels)
+  only_precipitation                       (1 channels)
+  only_pressure                            (5 channels)
+  only_clouds_rad                          (5 channels)
+  only_other                               (3 channels)
+
+Indexed 47952 input files.
+Building splits …
+  train=16915  val=4229  test=4584
+Loading cached norm stats from /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_norm_stats.pt
+
+Resuming — 14 experiments already done.
+  Skipping all_features (already complete)
+  Skipping drop_temperature (already complete)
+  Skipping drop_humidity (already complete)
+  Skipping drop_wind_u (already complete)
+  Skipping drop_wind_v (already complete)
+  Skipping drop_wind_gust (already complete)
+  Skipping drop_precipitation (already complete)
+  Skipping drop_pressure (already complete)
+  Skipping drop_clouds_rad (already complete)
+  Skipping drop_other (already complete)
+  Skipping only_temperature (already complete)
+  Skipping only_humidity (already complete)
+  Skipping only_wind_u (already complete)
+  Skipping only_wind_v (already complete)
+
+  Checkpoint exists for 'only_wind_gust', skipping training.
+
+  Results — only_wind_gust  (1 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:   6.5709
+    RH@2m_above_ground                          RMSE:  19.2217
+    UGRD@10m_above_ground                       RMSE:   2.7534
+    VGRD@10m_above_ground                       RMSE:   2.3871
+    GUST@surface                                RMSE:   3.5974
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7621
+    APCP (true>2mm)                             RMSE:   4.5311  [n=83]
+    APCP binary                                  AUC:   0.6691
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+==============================================================
+  Experiment : only_precipitation  (1 channels)
+==============================================================
+  Ep 01/50  tr=0.9542/0.1058  val=0.9529/0.0876  (374s)
+    checkpointed (val=0.9617)
+  Ep 02/50  tr=0.9234/0.0937  val=9.8959/0.1643  (329s)
+  Ep 03/50  tr=0.9093/0.0915  val=2.7556/0.1172  (336s)
+  Ep 04/50  tr=0.8972/0.0944  val=0.9748/0.0894  (326s)
+  Ep 05/50  tr=0.8757/0.0909  val=1.5697/0.0869  (329s)
+  Ep 06/50  tr=0.8448/0.0900  val=2.0223/0.0942  (323s)
+  Ep 07/50  tr=0.8485/0.0909  val=1.1997/0.0856  (326s)
+  Ep 08/50  tr=0.8311/0.0901  val=0.8657/0.0916  (326s)
+    checkpointed (val=0.8749)
+  Ep 09/50  tr=0.8212/0.0904  val=1.1164/0.0865  (331s)
+  Ep 10/50  tr=0.8014/0.0867  val=0.8482/0.0863  (325s)
+    checkpointed (val=0.8568)
+  Ep 11/50  tr=0.7954/0.0860  val=1.3603/0.0865  (327s)
+  Ep 12/50  tr=0.7869/0.0854  val=0.8853/0.0919  (328s)
+  Ep 13/50  tr=0.7581/0.0872  val=0.8337/0.0842  (326s)
+    checkpointed (val=0.8421)
+  Ep 14/50  tr=0.7408/0.0857  val=0.9047/0.0907  (325s)
+  Ep 15/50  tr=0.7261/0.0858  val=0.8394/0.0823  (328s)
+  Ep 16/50  tr=0.6826/0.0812  val=0.9384/0.0849  (327s)
+  Ep 17/50  tr=0.6555/0.0781  val=1.5608/0.0823  (322s)
+  Ep 18/50  tr=0.6346/0.0726  val=0.8345/0.0847  (323s)
+  Ep 19/50  tr=0.5947/0.0667  val=1.6024/0.1107  (323s)
+  Ep 20/50  tr=0.5585/0.0610  val=0.9140/0.1023  (321s)
+  Ep 21/50  tr=0.5318/0.0538  val=1.0482/0.0973  (319s)
+  Ep 22/50  tr=0.4912/0.0468  val=0.9211/0.1067  (320s)
+  Ep 23/50  tr=0.4532/0.0425  val=0.8623/0.1118  (324s)
+  Ep 24/50  tr=0.4175/0.0375  val=0.8846/0.1155  (325s)
+  Ep 25/50  tr=0.3847/0.0323  val=0.9625/0.1369  (324s)
+  Ep 26/50  tr=0.3740/0.0317  val=0.8967/0.1393  (322s)
+  Ep 27/50  tr=0.3474/0.0267  val=0.8971/0.1310  (322s)
+  Ep 28/50  tr=0.3192/0.0274  val=0.8672/0.1771  (328s)
+  Ep 29/50  tr=0.3030/0.0253  val=0.8794/0.1859  (319s)
+  Ep 30/50  tr=0.2884/0.0247  val=0.8933/0.1546  (324s)
+  Ep 31/50  tr=0.2716/0.0213  val=0.8972/0.1364  (324s)
+  Ep 32/50  tr=0.2534/0.0215  val=0.9035/0.1627  (324s)
+  Ep 33/50  tr=0.2456/0.0208  val=0.8766/0.1564  (323s)
+  Ep 34/50  tr=0.2298/0.0194  val=0.8750/0.1904  (323s)
+  Ep 35/50  tr=0.2349/0.0205  val=1.0487/0.1872  (330s)
+  Ep 36/50  tr=0.2188/0.0188  val=0.9949/0.1622  (328s)
+  Ep 37/50  tr=0.2045/0.0172  val=0.8756/0.1787  (326s)
+  Ep 38/50  tr=0.1971/0.0190  val=0.8729/0.1990  (329s)
+  Ep 39/50  tr=0.1919/0.0167  val=0.8931/0.1858  (333s)
+  Ep 40/50  tr=0.1838/0.0183  val=0.9623/0.1610  (331s)
+  Ep 41/50  tr=0.1811/0.0156  val=0.9361/0.1737  (323s)
+  Ep 42/50  tr=0.1702/0.0171  val=0.8581/0.1865  (329s)
+  Ep 43/50  tr=0.1687/0.0152  val=0.8694/0.2059  (322s)
+  Ep 44/50  tr=0.1695/0.0157  val=0.8685/0.2209  (327s)
+  Ep 45/50  tr=0.1715/0.0156  val=0.9765/0.1720  (320s)
+  Ep 46/50  tr=0.1613/0.0158  val=0.8610/0.2120  (331s)
+  Ep 47/50  tr=0.1639/0.0149  val=0.8790/0.1826  (326s)
+  Ep 48/50  tr=0.1632/0.0152  val=0.8863/0.1869  (327s)
+  Ep 49/50  tr=0.1596/0.0147  val=0.8759/0.2452  (323s)
+  Ep 50/50  tr=0.1688/0.0159  val=0.9191/0.1854  (331s)
+  Best val loss: 0.8421
+
+  Results — only_precipitation  (1 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:  10.5671
+    RH@2m_above_ground                          RMSE:  24.3433
+    UGRD@10m_above_ground                       RMSE:   3.3080
+    VGRD@10m_above_ground                       RMSE:   2.6171
+    GUST@surface                                RMSE:   4.1453
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7675
+    APCP (true>2mm)                             RMSE:   4.6189  [n=83]
+    APCP binary                                  AUC:   0.5250
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+  Checkpoint exists for 'only_pressure', skipping training.
+
+  Results — only_pressure  (5 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:   4.2362
+    RH@2m_above_ground                          RMSE:  17.7501
+    UGRD@10m_above_ground                       RMSE:   2.5343
+    VGRD@10m_above_ground                       RMSE:   2.2426
+    GUST@surface                                RMSE:   3.6835
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7596
+    APCP (true>2mm)                             RMSE:   4.5345  [n=83]
+    APCP binary                                  AUC:   0.6782
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+  Checkpoint exists for 'only_clouds_rad', skipping training.
+
+  Results — only_clouds_rad  (5 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:   8.7579
+    RH@2m_above_ground                          RMSE:  21.2004
+    UGRD@10m_above_ground                       RMSE:   2.9923
+    VGRD@10m_above_ground                       RMSE:   2.5648
+    GUST@surface                                RMSE:   4.0076
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7613
+    APCP (true>2mm)                             RMSE:   4.4563  [n=83]
+    APCP binary                                  AUC:   0.7143
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+  Checkpoint exists for 'only_other', skipping training.
+
+  Results — only_other  (3 channels)
+  ────────────────────────────────────────────────────────
+    TMP@2m_above_ground                         RMSE:   5.3559
+    RH@2m_above_ground                          RMSE:  20.4683
+    UGRD@10m_above_ground                       RMSE:   2.7547
+    VGRD@10m_above_ground                       RMSE:   2.4416
+    GUST@surface                                RMSE:   3.6308
+    APCP_1hr_acc_fcst@surface                   RMSE:   0.7574
+    APCP (true>2mm)                             RMSE:   4.5510  [n=83]
+    APCP binary                                  AUC:   0.7401
+  Saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.json
+
+CSV saved → /cluster/tufts/c26sp1cs0137/ashen05/ablation/ablation_results.csv
+
+====================================================================================================
+                                      ABLATION RESULTS SUMMARY                                      
+====================================================================================================
+Experiment                              #ch      TMP      RH    UGRD    VGRD    GUST   APCP>2     AUC
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  all_features                           42   3.6726  16.710  2.7185  2.1667  3.7005   4.5075  0.6769
+  drop_clouds_rad                        37   3.6983  15.770  2.5831  2.2987  3.5769   4.4765  0.7243
+  drop_humidity                          35   3.6206  16.017  2.7176  2.2757  3.6274   4.4162  0.6993
+  drop_other                             39   3.4145  15.732  2.6998  2.2318  3.5668   4.5675  0.6346
+  drop_precipitation                     41   3.6693  16.450  2.5933  2.3079  3.6514   4.5031  0.6067
+  drop_pressure                          37   3.4876  16.053  2.5393  2.2921  3.6739   4.5529  0.5622
+  drop_temperature                       36   3.5093  15.866  2.6577  2.1592  3.6491   4.4645  0.6797
+  drop_wind_gust                         41   3.7030  16.567  2.6725  2.2156  3.6106   4.5828  0.5861
+  drop_wind_u                            35   3.7945  16.209  2.6111  2.3236  3.5834   4.4573  0.7189
+  drop_wind_v                            35   3.8183  17.643  2.9433  2.2949  3.8427   4.6054  0.6057
+  only_clouds_rad                         5   8.7579  21.200  2.9923  2.5648  4.0076   4.4563  0.7143
+  only_humidity                           7   4.1202  19.423  2.9761  2.5501  3.9696   4.5356  0.7271
+  only_other                              3   5.3559  20.468  2.7547  2.4416  3.6308   4.5510  0.7401
+  only_precipitation                      1  10.5671  24.343  3.3080  2.6171  4.1453   4.6189  0.5250
+  only_pressure                           5   4.2362  17.750  2.5343  2.2426  3.6835   4.5345  0.6782
+  only_temperature                        6   4.1597  19.503  2.9543  2.5219  3.8659   4.5397  0.6279
+  only_wind_gust                          1   6.5709  19.222  2.7534  2.3871  3.5974   4.5311  0.6691
+  only_wind_u                             7   6.4375  17.396  2.5685  2.5404  3.6706   4.5411  0.6447
+  only_wind_v                             7   5.9230  17.698  2.5977  2.2352  3.6757   4.5368  0.6604
+
+Outputs in: /cluster/tufts/c26sp1cs0137/ashen05/ablation
+
+DONE: only_clouds_rad
+End time: Wed Apr  1 06:54:03 EDT 2026

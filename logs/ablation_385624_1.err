@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/cluster/tufts/c26sp1cs0137/ashen05/ablation.py", line 503, in <module>
+    metrics = evaluate_model(label, channel_list, ckpt_path)
+  File "/cluster/tufts/c26sp1cs0137/ashen05/ablation.py", line 423, in evaluate_model
+    ckpt  = torch.load(ckpt_path, map_location='cpu', weights_only=False)
+  File "/opt/conda/lib/python3.10/site-packages/torch/serialization.py", line 1004, in load
+    with _open_zipfile_reader(opened_file) as opened_zipfile:
+  File "/opt/conda/lib/python3.10/site-packages/torch/serialization.py", line 456, in __init__
+    super().__init__(torch._C.PyTorchFileReader(name_or_buffer))
+RuntimeError: PytorchStreamReader failed reading zip archive: failed finding central directory
